@@ -1,0 +1,195 @@
+group ListViewGenerator;
+
+/**
+ * The main template that generates the activity for list view
+ */
+main(packageName, listViews) ::= <<
+package <packageName>;
+
+import java.util.ArrayList;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.ListView;
+
+public class MainActivity extends Activity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.main);
+
+        <listViews:addListViewMethodCall()>
+    }
+
+    <listViews:addListViewMethod()>
+}
+>>
+
+
+/**
+ * Generates add listview method call 
+ */
+addListViewMethodCall(listView) ::= <<
+add<listView.name>();<\n>
+>>
+
+/**
+ * Generates add listview method 
+ */
+addListViewMethod(listView) ::= <<
+private void add<listView.name>() {
+    final ListView listview = (ListView) findViewById(R.id.<listView.id>);
+    final ArrayList\<<listView.infoClassName>\> listValues = new ArrayList\<<listView.infoClassName>\>();
+    <listView.listInfos:addListValueStatement(listView.infoClassName)>
+    <listView.adapterClassName> adapter = new <listView.adapterClassName>(this, listValues);
+    listview.setAdapter(adapter);
+}
+>>
+
+/**
+ * Generates add values statement
+ */
+addListValueStatement(listInfo, infoClassName) ::= <<
+listValues.add(new <infoClassName>(<listInfo.metadatas:parameterListInfo()>));<\n>
+>>
+
+/**
+ * Generates paramenters for listinfo statement
+ */
+parameterListInfo(metadata) ::= <%
+<if(metadata.isText)>
+R.string.<metadata.value>
+<else>
+R.drawable.<metadata.value>
+<endif>
+
+<if(!metadata.isLast)>
+, 
+<endif>
+%>
+
+/**
+ * The main template that generates the adapter for list view
+ */
+adapter(packageName, listView) ::= <<
+package <packageName>;
+
+import java.util.ArrayList;
+
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+
+public class <listView.adapterClassName> extends BaseArrayAdapter\<<listView.infoClassName>\> {
+    
+    public <listView.adapterClassName>(Context context, ArrayList\<<listView.infoClassName>\> listValues) {
+        super(context, R.layout.<listView.layoutName>, listValues);
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        View rowView = super.getView(position, convertView, parent);
+        <listView.listFieldMetatata:addContent()>
+        return rowView;
+    }
+}
+>>
+
+/**
+ * Generates add content method
+ */
+addContent(metadata) ::= <<
+<if(metadata.isText)>
+addText<else>addImage<endif>(rowView, listValues.get(position).<metadata.variableName>, R.id.<metadata.layoutId>);<\n>
+>>
+
+/**
+ * The main template that generates the adapter for list view
+ */
+listinfo(packageName, listView) ::= <<
+package <packageName>;
+
+public class <listView.infoClassName> {
+
+    <listView.listFieldMetatata:addField()>
+       
+    public <listView.infoClassName>(<listView.listFieldMetatata:addParam()>) {
+        <listView.listFieldMetatata:addConstructorBody()>
+    }
+}
+>>
+
+/**
+ * Generates fields
+ */
+addField(metadata) ::= <<
+int <metadata.variableName>;<\n>
+>>
+
+/**
+ * Generates constructor param
+ */
+addParam(metadata) ::= <%
+int <metadata.variableName>
+<if(!metadata.isLast)>
+, 
+<endif>
+%>
+
+/**
+ * Generates constructor body
+ */
+addConstructorBody(metadata) ::= <<
+this.<metadata.variableName> = <metadata.variableName>;<\n>
+>>
+
+/**
+ * The main template that generates the adapter for list view
+ */
+baseadapter(packageName) ::= <<
+package <packageName>;
+
+import java.util.ArrayList;
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+public class BaseArrayAdapter\<T> extends ArrayAdapter\<T> {
+    protected final Context context;
+    protected final ArrayList\<T> listValues;
+    private int rowLayoutId;
+
+    public BaseArrayAdapter(Context context, int rowLayoutId, ArrayList\<T> listValues) {
+        super(context, rowLayoutId, listValues);
+        this.context = context;
+        this.rowLayoutId = rowLayoutId;
+        this.listValues = listValues;
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        LayoutInflater inflater = (LayoutInflater) context
+                .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View rowView = inflater.inflate(rowLayoutId, parent, false);
+        return rowView;
+    }
+
+    protected void addImage(View rowView, int drawableId, int id) {
+        ImageView imageView = (ImageView) rowView.findViewById(id);
+        imageView.setImageResource(drawableId);
+    }
+
+    protected void addText(View rowView, int textId, int id) {
+        TextView textView = (TextView) rowView.findViewById(id);
+        textView.setText(getContext().getResources().getString(textId));
+    }
+}
+
+>>
+
